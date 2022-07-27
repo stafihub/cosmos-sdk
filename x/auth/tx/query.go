@@ -151,3 +151,61 @@ func mkTxResult(txConfig client.TxConfig, resTx *ctypes.ResultTx, resBlock *ctyp
 type intoAny interface {
 	AsAny() *codectypes.Any
 }
+
+func QueryTxsByEventsWithParseErrSkip(clientCtx client.Context, events []string, page, limit int, orderBy string) (*sdk.SearchTxsResult, error) {
+	if len(events) == 0 {
+		return nil, errors.New("must declare at least one event to search")
+	}
+
+	if page <= 0 {
+		return nil, errors.New("page must greater than 0")
+	}
+
+	if limit <= 0 {
+		return nil, errors.New("limit must greater than 0")
+	}
+
+	// XXX: implement ANY
+	query := strings.Join(events, " AND ")
+
+	node, err := clientCtx.GetNode()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: this may not always need to be proven
+	// https://github.com/cosmos/cosmos-sdk/issues/6807
+	resTxs, err := node.TxSearch(context.Background(), query, true, &page, &limit, orderBy)
+	if err != nil {
+		return nil, err
+	}
+
+	resBlocks, err := getBlocksForTxResults(clientCtx, resTxs.Txs)
+	if err != nil {
+		return nil, err
+	}
+
+	txs, skipCount, err := formatTxResultsWithParseErrSkip(clientCtx.TxConfig, resTxs.Txs, resBlocks)
+	if err != nil {
+		return nil, err
+	}
+
+	result := sdk.NewSearchTxsResult(uint64(resTxs.TotalCount-skipCount), uint64(len(txs)), uint64(page), uint64(limit), txs)
+
+	return result, nil
+}
+
+func formatTxResultsWithParseErrSkip(txConfig client.TxConfig, resTxs []*ctypes.ResultTx, resBlocks map[int64]*ctypes.ResultBlock) ([]*sdk.TxResponse, int, error) {
+	skipCount := 0
+	out := make([]*sdk.TxResponse, 0)
+	for i := range resTxs {
+		o, err := mkTxResult(txConfig, resTxs[i], resBlocks[resTxs[i].Height])
+		if err != nil {
+			skipCount++
+			continue
+		}
+		out = append(out, o)
+	}
+
+	return out, skipCount, nil
+}

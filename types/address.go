@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/internal/conv"
 )
 
 const (
@@ -276,14 +277,11 @@ func (aa AccAddress) String() string {
 		return ""
 	}
 
-	var key = conv.UnsafeBytesToStr(aa)
-	accAddrMu.Lock()
-	defer accAddrMu.Unlock()
-	addr, ok := accAddrCache.Get(key)
-	if ok {
-		return addr.(string)
+	bech32Addr, err := bech32.ConvertAndEncode(GetConfig().GetBech32AccountAddrPrefix(), aa)
+	if err != nil {
+		panic(err)
 	}
-	return cacheBech32Addr(GetConfig().GetBech32AccountAddrPrefix(), aa, accAddrCache, key)
+	return bech32Addr
 }
 
 // Format implements the fmt.Formatter interface.
@@ -426,14 +424,11 @@ func (va ValAddress) String() string {
 		return ""
 	}
 
-	var key = conv.UnsafeBytesToStr(va)
-	valAddrMu.Lock()
-	defer valAddrMu.Unlock()
-	addr, ok := valAddrCache.Get(key)
-	if ok {
-		return addr.(string)
+	bech32Addr, err := bech32.ConvertAndEncode(GetConfig().GetBech32ValidatorAddrPrefix(), va)
+	if err != nil {
+		panic(err)
 	}
-	return cacheBech32Addr(GetConfig().GetBech32ValidatorAddrPrefix(), va, valAddrCache, key)
+	return bech32Addr
 }
 
 // Format implements the fmt.Formatter interface.
@@ -581,14 +576,11 @@ func (ca ConsAddress) String() string {
 		return ""
 	}
 
-	var key = conv.UnsafeBytesToStr(ca)
-	consAddrMu.Lock()
-	defer consAddrMu.Unlock()
-	addr, ok := consAddrCache.Get(key)
-	if ok {
-		return addr.(string)
+	bech32Addr, err := bech32.ConvertAndEncode(GetConfig().GetBech32ConsensusAddrPrefix(), ca)
+	if err != nil {
+		panic(err)
 	}
-	return cacheBech32Addr(GetConfig().GetBech32ConsensusAddrPrefix(), ca, consAddrCache, key)
+	return bech32Addr
 }
 
 // Bech32ifyAddressBytes returns a bech32 representation of address bytes.

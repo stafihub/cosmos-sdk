@@ -152,17 +152,18 @@ type intoAny interface {
 	AsAny() *codectypes.Any
 }
 
-func QueryTxsByEventsWithParseErrSkip(clientCtx client.Context, events []string, page, limit int, orderBy string) (*sdk.SearchTxsResult, error) {
+// return skip tx count in this page
+func QueryTxsByEventsWithParseErrSkip(clientCtx client.Context, events []string, page, limit int, orderBy string) (*sdk.SearchTxsResult, int, error) {
 	if len(events) == 0 {
-		return nil, errors.New("must declare at least one event to search")
+		return nil, 0, errors.New("must declare at least one event to search")
 	}
 
 	if page <= 0 {
-		return nil, errors.New("page must greater than 0")
+		return nil, 0, errors.New("page must greater than 0")
 	}
 
 	if limit <= 0 {
-		return nil, errors.New("limit must greater than 0")
+		return nil, 0, errors.New("limit must greater than 0")
 	}
 
 	// XXX: implement ANY
@@ -170,29 +171,29 @@ func QueryTxsByEventsWithParseErrSkip(clientCtx client.Context, events []string,
 
 	node, err := clientCtx.GetNode()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// TODO: this may not always need to be proven
 	// https://github.com/cosmos/cosmos-sdk/issues/6807
 	resTxs, err := node.TxSearch(context.Background(), query, true, &page, &limit, orderBy)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	resBlocks, err := getBlocksForTxResults(clientCtx, resTxs.Txs)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	txs, skipCount, err := formatTxResultsWithParseErrSkip(clientCtx.TxConfig, resTxs.Txs, resBlocks)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	result := sdk.NewSearchTxsResult(uint64(resTxs.TotalCount-skipCount), uint64(len(txs)), uint64(page), uint64(limit), txs)
+	result := sdk.NewSearchTxsResult(uint64(resTxs.TotalCount), uint64(len(txs)), uint64(page), uint64(limit), txs)
 
-	return result, nil
+	return result, skipCount, nil
 }
 
 func formatTxResultsWithParseErrSkip(txConfig client.TxConfig, resTxs []*ctypes.ResultTx, resBlocks map[int64]*ctypes.ResultBlock) ([]*sdk.TxResponse, int, error) {

@@ -39,6 +39,9 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ## [v0.45.6](https://github.com/cosmos/cosmos-sdk/releases/tag/v0.45.6) - 2022-06-28
 
+### API Breaking Changes
+* (x/slashing) [\#9458](https://github.com/cosmos/cosmos-sdk/pull/9458) Coins burned from slashing is now returned from Slash function and included in Slash event. 
+
 ### Improvements
 
 * (simapp) [#12314](https://github.com/cosmos/cosmos-sdk/pull/12314) Increase `DefaultGenTxGas` from `1000000` to `10000000`
